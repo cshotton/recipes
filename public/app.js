@@ -157,6 +157,14 @@ async function updateAuthUI() {
         if (resp.ok) {
             const body = await resp.json();
             authState = !!body.authed;
+            // Set page title from siteName
+            if (body.siteName) {
+                document.title = body.siteName;
+                const titleElement = document.querySelector('.header-bar h1');
+                if (titleElement) {
+                    titleElement.textContent = body.siteName;
+                }
+            }
         } else {
             authState = false;
         }

@@ -7,6 +7,8 @@ const recipeRoutes = require('./routes/recipes');
 
 const app = express();
 const PORT = process.env.PORT || 8003;
+const SERVER_PASSWORD = process.env.SERVER_PASSWORD || 'maple';
+const SITE_NAME = process.env.SITE_NAME || 'Recipes';
 
 // Middleware
 app.use(cors());
@@ -22,7 +24,7 @@ app.get('/login', (req, res) => {
 // Login handler (form POST)
 app.post('/login', (req, res) => {
   const password = req.body.password;
-  if (password === 'maple') {
+  if (password === SERVER_PASSWORD) {
     // set cookie valid for 1 year
     const oneYear = 1000 * 60 * 60 * 24 * 365;
     res.cookie('recipes_auth', 'authed', { maxAge: oneYear, httpOnly: false });
@@ -54,7 +56,7 @@ app.use('/api/recipes', recipeRoutes);
 // Auth status endpoint for frontend to query authentication state
 app.get('/api/auth/status', (req, res) => {
   const authed = req.cookies && req.cookies.recipes_auth === 'authed';
-  res.json({ authed });
+  res.json({ authed, siteName: SITE_NAME });
 });
 
 // Serve frontend (root)
