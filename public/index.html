@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Database</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍳 Recipe Database</h1>
+        </header>
+
+        <nav class="nav">
+            <button id="viewAllBtn" class="nav-btn active">All Recipes</button>
+            <button id="addRecipeBtn" class="nav-btn">Add Recipe</button>
+            <button id="importBtn" class="nav-btn">Import CSV</button>
+        </nav>
+
+        <!-- Recipe List View -->
+        <div id="listView" class="view">
+            <div id="recipesList" class="recipes-grid">
+                <!-- Recipes will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Add/Edit Recipe View -->
+        <div id="formView" class="view hidden">
+            <div class="form-container">
+                <h2 id="formTitle">Add New Recipe</h2>
+                <form id="recipeForm">
+                    <div class="form-group">
+                        <label for="title">Recipe Title *</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="prepTime">Prep Time (minutes)</label>
+                            <input type="number" id="prepTime" name="prepTime" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="cookTime">Cook Time (minutes)</label>
+                            <input type="number" id="cookTime" name="cookTime" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="servings">Servings</label>
+                            <input type="number" id="servings" name="servings" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ingredients">Ingredients *</label>
+                        <textarea id="ingredients" name="ingredients" rows="6" placeholder="One ingredient per line" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="instructions">Instructions *</label>
+                        <textarea id="instructions" name="instructions" rows="8" placeholder="Step-by-step instructions" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Recipe</button>
+                        <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recipe Detail View -->
+        <div id="detailView" class="view hidden">
+            <div class="detail-container">
+                <button id="backBtn" class="btn btn-secondary">← Back</button>
+                <div id="recipeDetail"></div>
+            </div>
+        </div>
+
+        <!-- CSV Import View -->
+        <div id="importView" class="view hidden">
+            <div class="form-container">
+                <h2>Import Recipes from CSV</h2>
+                <p class="import-info">Upload a CSV file with the following columns:</p>
+                <ul class="import-info">
+                    <li><strong>category</strong> - Recipe category</li>
+                    <li><strong>title</strong> - Recipe name (required)</li>
+                    <li><strong>servings</strong> - Number of servings</li>
+                    <li><strong>ingredients</strong> - Ingredients (required, one per line)</li>
+                    <li><strong>instructions</strong> - Instructions (required, one per line)</li>
+                    <li><strong>notes</strong> - Additional notes</li>
+                </ul>
+                <form id="importForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="csvFile">Select CSV File *</label>
+                        <input type="file" id="csvFile" name="csvFile" accept=".csv" required>
+                    </div>
+                    <div id="importProgress" class="hidden">
+                        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+                        <p id="importStatus">Importing...</p>
+                    </div>
+                    <div id="importResult" class="hidden">
+                        <div id="importResultContent"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Import Recipes</button>
+                        <button type="button" id="importCancelBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
