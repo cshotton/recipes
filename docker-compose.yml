@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  recipes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: home.shotton.us:5443/recipes:latest
+    container_name: recipes-app
+    ports:
+      - "8003:8003"
+    volumes:
+      - ${RECIPES_DATA_PATH:-.}/recipes-data:/app/recipes-data
+    environment:
+      - NODE_ENV=production
+      - PORT=8003
+    restart: unless-stopped

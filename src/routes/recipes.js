@@ -7,6 +7,12 @@ const { run, get, all } = require('../database/db');
 
 const router = express.Router();
 
+// Require auth for write operations
+function requireAuth(req, res, next) {
+  if (req.cookies && req.cookies.recipes_auth === 'authed') return next();
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
@@ -14,6 +20,28 @@ const upload = multer({ dest: 'uploads/' });
 router.get('/', async (req, res) => {
   try {
     const recipes = await all('SELECT * FROM recipes ORDER BY createdAt DESC');
+    res.json(recipes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Search recipes
+router.get('/search', async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) {
+      return res.json([]);
+    }
+
+    const searchTerm = `%${query}%`;
+    const recipes = await all(
+      `SELECT * FROM recipes 
+       WHERE LOWER(title) LIKE LOWER(?) 
+       OR LOWER(ingredients) LIKE LOWER(?) 
+       ORDER BY createdAt DESC`,
+      [searchTerm, searchTerm]
+    );
     res.json(recipes);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -31,19 +59,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create recipe
-router.post('/', async (req, res) => {
-  const { title, description, ingredients, instructions, prepTime, cookTime, servings } = req.body;
+// Create recipe (protected)
+router.post('/', requireAuth, async (req, res) => {
+  const { title, category, description, ingredients, instructions, prepTime, cookTime, servings } = req.body;
   
-  if (!title || !ingredients || !instructions) {
-    return res.status(400).json({ error: 'Title, ingredients, and instructions are required' });
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
   }
 
   try {
     const result = await run(
-      `INSERT INTO recipes (title, description, ingredients, instructions, prepTime, cookTime, servings) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [title, description, ingredients, instructions, prepTime, cookTime, servings]
+      `INSERT INTO recipes (title, category, description, ingredients, instructions, prepTime, cookTime, servings) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [title, category || 'unknown', description || null, ingredients || null, instructions || null, prepTime || null, cookTime || null, servings || null]
     );
     res.status(201).json({ id: result.lastID, message: 'Recipe created' });
   } catch (err) {
@@ -51,15 +79,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update recipe
-router.put('/:id', async (req, res) => {
-  const { title, description, ingredients, instructions, prepTime, cookTime, servings } = req.body;
+// Update recipe (protected)
+router.put('/:id', requireAuth, async (req, res) => {
+  const { title, category, description, ingredients, instructions, prepTime, cookTime, servings } = req.body;
 
   try {
     await run(
-      `UPDATE recipes SET title = ?, description = ?, ingredients = ?, instructions = ?, 
+      `UPDATE recipes SET title = ?, category = ?, description = ?, ingredients = ?, instructions = ?, 
        prepTime = ?, cookTime = ?, servings = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
-      [title, description, ingredients, instructions, prepTime, cookTime, servings, req.params.id]
+      [title || null, category || 'unknown', description || null, ingredients || null, instructions || null, prepTime || null, cookTime || null, servings || null, req.params.id]
     );
     res.json({ message: 'Recipe updated' });
   } catch (err) {
@@ -67,8 +95,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete recipe
-router.delete('/:id', async (req, res) => {
+// Delete recipe (protected)
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     await run('DELETE FROM recipes WHERE id = ?', [req.params.id]);
     res.json({ message: 'Recipe deleted' });
@@ -77,8 +105,8 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Import recipes from CSV
-router.post('/import/csv', upload.single('file'), async (req, res) => {
+// Import recipes from CSV (protected) - check auth before accepting upload
+router.post('/import/csv', requireAuth, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -105,15 +133,20 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
             title = title ? title.trim() : '';
             ingredients = ingredients ? ingredients.trim() : '';
             instructions = instructions ? instructions.trim() : '';
-            category = category ? category.trim() : '';
+            category = category ? category.trim() : 'unknown';
             notes = notes ? notes.trim() : '';
             servings = servings ? servings.trim() : null;
 
-            if (!title || !ingredients || !instructions) {
+            if (!title) {
               errorCount++;
-              errors.push(`Row ${i + 1}: Missing required fields (title, ingredients, or instructions)`);
+              errors.push(`Row ${i + 1}: Missing required field (title)`);
               continue;
             }
+
+            // Replace \n sequences with actual newlines
+            ingredients = ingredients.replace(/\\n/g, '\n');
+            instructions = instructions.replace(/\\n/g, '\n');
+            notes = notes.replace(/\\n/g, '\n');
 
             // Parse servings - extract just the number if it's something like "6 " or "8+"
             let parsedServings = null;
@@ -122,16 +155,13 @@ router.post('/import/csv', upload.single('file'), async (req, res) => {
               parsedServings = match ? parseInt(match[0]) : null;
             }
 
-            // Combine category and notes for description
-            let description = '';
-            if (category) description += `[${category}] `;
-            if (notes) description += notes;
-            description = description.trim() || null;
+            // Combine notes with description if notes exist
+            let description = notes || null;
 
             await run(
-              `INSERT INTO recipes (title, description, ingredients, instructions, servings) 
-               VALUES (?, ?, ?, ?, ?)`,
-              [title, description, ingredients, instructions, parsedServings]
+              `INSERT INTO recipes (title, category, description, ingredients, instructions, servings) 
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [title, category, description, ingredients || null, instructions || null, parsedServings]
             );
             importedCount++;
           } catch (err) {

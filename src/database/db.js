@@ -1,7 +1,18 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, '../../recipes.db');
+// Use external volume if in Docker, otherwise use project root
+const dataDir = process.env.NODE_ENV === 'production' 
+  ? '/app/recipes-data'
+  : path.join(__dirname, '../../');
+
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const dbPath = path.join(dataDir, 'recipes.db');
 const db = new sqlite3.Database(dbPath);
 
 const initialize = () => {
@@ -10,9 +21,10 @@ const initialize = () => {
       CREATE TABLE IF NOT EXISTS recipes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
+        category TEXT DEFAULT 'unknown',
         description TEXT,
-        ingredients TEXT NOT NULL,
-        instructions TEXT NOT NULL,
+        ingredients TEXT,
+        instructions TEXT,
         prepTime INTEGER,
         cookTime INTEGER,
         servings INTEGER,

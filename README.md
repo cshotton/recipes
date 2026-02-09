@@ -40,7 +40,47 @@ npm install
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:3000`
+3. Open your browser and navigate to `http://localhost:8003`
+
+## Docker Setup
+
+### Build Docker Image
+
+To build the Docker image for the private registry:
+
+```bash
+docker build -t home.shotton.us:5443/recipes:latest .
+```
+
+Push to registry:
+```bash
+docker push home.shotton.us:5443/recipes:latest
+```
+
+### Run with Docker Compose
+
+To run the application using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+This will:
+- Start the recipes app on port 8003
+- Create a `recipes-data` folder in the current directory to persist the database
+- The database will be stored at `./recipes-data/recipes.db`
+
+Stop the application:
+```bash
+docker-compose down
+```
+
+View logs:
+```bash
+docker-compose logs -f recipes
+```
+
+The application will be available at `http://localhost:8003`
 
 ## Available Scripts
 

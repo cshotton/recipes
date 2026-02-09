@@ -4,6 +4,10 @@ const API_URL = '/api/recipes';
 const viewAllBtn = document.getElementById('viewAllBtn');
 const addRecipeBtn = document.getElementById('addRecipeBtn');
 const importBtn = document.getElementById('importBtn');
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+const cardViewBtn = document.getElementById('cardViewBtn');
+const listViewBtn = document.getElementById('listViewBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const backBtn = document.getElementById('backBtn');
 const importCancelBtn = document.getElementById('importCancelBtn');
@@ -17,8 +21,11 @@ const importView = document.getElementById('importView');
 
 const recipesList = document.getElementById('recipesList');
 const recipeDetail = document.getElementById('recipeDetail');
+const loginBtn = document.getElementById('loginBtn');
 
 let currentEditId = null;
+let currentViewMode = 'card'; // 'card' or 'list'
+let currentSearchQuery = '';
 
 // View Management
 function showView(view) {
@@ -74,6 +81,86 @@ importCancelBtn.addEventListener('click', () => {
 
 importForm.addEventListener('submit', importRecipesFromCSV);
 
+// View Toggle
+cardViewBtn.addEventListener('click', () => {
+    currentViewMode = 'card';
+    cardViewBtn.classList.add('active');
+    listViewBtn.classList.remove('active');
+    loadRecipes();
+});
+
+listViewBtn.addEventListener('click', () => {
+    currentViewMode = 'list';
+    listViewBtn.classList.add('active');
+    cardViewBtn.classList.remove('active');
+    loadRecipes();
+});
+
+// Search
+searchInput.addEventListener('input', (e) => {
+    currentSearchQuery = e.target.value.trim();
+    if (currentSearchQuery) {
+        clearSearchBtn.classList.remove('hidden');
+        searchRecipes(currentSearchQuery);
+    } else {
+        clearSearchBtn.classList.add('hidden');
+        loadRecipes();
+    }
+});
+
+// Authentication state (cached)
+let authState = false;
+
+function isAuthenticated() {
+    return authState === true;
+}
+
+// Update UI by querying server-side auth status
+async function updateAuthUI() {
+    try {
+        const resp = await fetch('/api/auth/status', { credentials: 'same-origin' });
+        if (resp.ok) {
+            const body = await resp.json();
+            authState = !!body.authed;
+        } else {
+            authState = false;
+        }
+    } catch (err) {
+        authState = false;
+    }
+
+    if (addRecipeBtn) addRecipeBtn.style.display = authState ? '' : 'none';
+    if (importBtn) importBtn.style.display = authState ? '' : 'none';
+    if (loginBtn) loginBtn.textContent = authState ? 'Logout' : 'Login';
+}
+
+// Login/Logout button behaviour
+if (loginBtn) {
+    loginBtn.addEventListener('click', async () => {
+        if (!isAuthenticated()) {
+            // redirect to login page
+            window.location.href = '/login';
+            return;
+        }
+
+        // perform logout
+        try {
+            await fetch('/logout', { method: 'GET', credentials: 'same-origin' });
+        } catch (err) {
+            console.error('Logout failed', err);
+        }
+        await updateAuthUI();
+        loadRecipes();
+    });
+}
+
+clearSearchBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    currentSearchQuery = '';
+    clearSearchBtn.classList.add('hidden');
+    loadRecipes();
+});
+
 // Load and Display Recipes
 async function loadRecipes() {
     try {
@@ -83,6 +170,18 @@ async function loadRecipes() {
     } catch (error) {
         console.error('Error loading recipes:', error);
         recipesList.innerHTML = '<div class="empty-state"><h2>Error</h2><p>Could not load recipes</p></div>';
+    }
+}
+
+// Search Recipes
+async function searchRecipes(query) {
+    try {
+        const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+        const recipes = await response.json();
+        displayRecipes(recipes);
+    } catch (error) {
+        console.error('Error searching recipes:', error);
+        recipesList.innerHTML = '<div class="empty-state"><h2>Error</h2><p>Could not search recipes</p></div>';
     }
 }
 
@@ -97,21 +196,44 @@ function displayRecipes(recipes) {
         return;
     }
 
-    recipesList.innerHTML = recipes.map(recipe => `
-        <div class="recipe-card" onclick="viewRecipeDetail(${recipe.id})">
-            <h3>${escapeHtml(recipe.title)}</h3>
-            <p>${recipe.description ? escapeHtml(recipe.description) : 'No description'}</p>
-            <div class="recipe-meta">
-                ${recipe.prepTime ? `<span>⏱️ Prep: ${recipe.prepTime}m</span>` : ''}
-                ${recipe.cookTime ? `<span>🔥 Cook: ${recipe.cookTime}m</span>` : ''}
-                ${recipe.servings ? `<span>👥 ${recipe.servings} servings</span>` : ''}
+    if (currentViewMode === 'list') {
+        recipesList.className = 'recipes-list';
+        recipesList.innerHTML = recipes.map(recipe => `
+            <div class="recipe-list-item" onclick="viewRecipeDetail(${recipe.id})">
+                <div class="recipe-list-info">
+                    <h3>${escapeHtml(recipe.title)}</h3>
+                    ${recipe.category ? `<p><strong>Category:</strong> ${escapeHtml(recipe.category)}</p>` : ''}
+                    <div class="recipe-list-meta">
+                        ${recipe.prepTime ? `<span>⏱️ Prep: ${recipe.prepTime}m</span>` : ''}
+                        ${recipe.cookTime ? `<span>🔥 Cook: ${recipe.cookTime}m</span>` : ''}
+                        ${recipe.servings ? `<span>👥 ${recipe.servings} servings</span>` : ''}
+                    </div>
+                </div>
+                ${isAuthenticated() ? `<div class="recipe-list-actions">
+                    <button class="edit" onclick="event.stopPropagation(); editRecipe(${recipe.id})">Edit</button>
+                    <button class="delete" onclick="event.stopPropagation(); deleteRecipe(${recipe.id})">Delete</button>
+                </div>` : ''}
             </div>
-            <div class="recipe-actions">
-                <button class="edit" onclick="event.stopPropagation(); editRecipe(${recipe.id})">Edit</button>
-                <button class="delete" onclick="event.stopPropagation(); deleteRecipe(${recipe.id})">Delete</button>
+        `).join('');
+    } else {
+        recipesList.className = 'recipes-grid';
+        recipesList.innerHTML = recipes.map(recipe => `
+            <div class="recipe-card" onclick="viewRecipeDetail(${recipe.id})">
+                <h3>${escapeHtml(recipe.title)}</h3>
+                ${recipe.category ? `<p><strong>Category:</strong> ${escapeHtml(recipe.category)}</p>` : ''}
+                <p>${recipe.description ? escapeHtml(recipe.description) : 'No description'}</p>
+                <div class="recipe-meta">
+                    ${recipe.prepTime ? `<span>⏱️ Prep: ${recipe.prepTime}m</span>` : ''}
+                    ${recipe.cookTime ? `<span>🔥 Cook: ${recipe.cookTime}m</span>` : ''}
+                    ${recipe.servings ? `<span>👥 ${recipe.servings} servings</span>` : ''}
+                </div>
+                ${isAuthenticated() ? `<div class="recipe-actions">
+                    <button class="edit" onclick="event.stopPropagation(); editRecipe(${recipe.id})">Edit</button>
+                    <button class="delete" onclick="event.stopPropagation(); deleteRecipe(${recipe.id})">Delete</button>
+                </div>` : ''}
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
 }
 
 // View Recipe Detail
@@ -144,10 +266,10 @@ async function viewRecipeDetail(id) {
                     ${instructions.map(inst => `<li>${escapeHtml(inst)}</li>`).join('')}
                 </ol>
 
-                <div class="detail-actions">
+                ${isAuthenticated() ? `<div class="detail-actions">
                     <button class="btn btn-primary" onclick="editRecipe(${recipe.id})">Edit</button>
                     <button class="btn btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
-                </div>
+                </div>` : ''}
             </div>
         `;
         
@@ -310,4 +432,5 @@ async function importRecipesFromCSV(e) {
 }
 
 // Initialize
+updateAuthUI();
 loadRecipes();

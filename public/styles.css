@@ -38,6 +38,14 @@ header h1 {
     padding: 20px;
     border-bottom: 1px solid #eee;
     background: #f9f9f9;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-right {
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
 
 .nav-btn {
@@ -63,6 +71,82 @@ header h1 {
     border-color: #667eea;
 }
 
+/* Search */
+.search-container {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    padding: 0 10px;
+    transition: border-color 0.3s ease;
+}
+
+.search-container:focus-within {
+    border-color: #667eea;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    padding: 8px 0;
+    font-size: 14px;
+    outline: none;
+    min-width: 200px;
+}
+
+.search-input::placeholder {
+    color: #999;
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    font-size: 16px;
+    transition: color 0.2s ease;
+    margin-left: 8px;
+}
+
+.search-clear:hover {
+    color: #333;
+}
+
+.search-clear.hidden {
+    display: none;
+}
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.view-toggle-btn {
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    background: white;
+    color: #333;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.view-toggle-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.view-toggle-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
 .view {
     padding: 30px;
     display: block;
@@ -77,6 +161,85 @@ header h1 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+}
+
+/* Recipe List */
+.recipes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.recipe-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.recipe-list-item:hover {
+    background-color: #f9f9f9;
+}
+
+.recipe-list-item:first-child {
+    border-top: 1px solid #eee;
+}
+
+.recipe-list-info {
+    flex: 1;
+}
+
+.recipe-list-info h3 {
+    color: #667eea;
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+}
+
+.recipe-list-info p {
+    color: #999;
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.recipe-list-meta {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #999;
+}
+
+.recipe-list-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 15px;
+}
+
+.recipe-list-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.3s ease;
+}
+
+.recipe-list-actions .edit {
+    background: #667eea;
+    color: white;
+}
+
+.recipe-list-actions .delete {
+    background: #ff6b6b;
+    color: white;
+}
+
+.recipe-list-actions button:hover {
+    opacity: 0.8;
 }
 
 .recipe-card {
