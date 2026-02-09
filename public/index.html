@@ -3,23 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recipe Database</title>
+    <title>Teetah's Recipes</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🍳 Recipe Database</h1>
+        <header class="header-bar">
+            <h1>🍳 Teetah's Recipes</h1>
+            <button id="loginBtn" class="nav-btn login-btn">Login</button>
         </header>
 
         <nav class="nav">
-            <button id="viewAllBtn" class="nav-btn active">All Recipes</button>
             <button id="addRecipeBtn" class="nav-btn">Add Recipe</button>
             <button id="importBtn" class="nav-btn">Import CSV</button>
             <div class="nav-right">
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search recipes..." class="search-input">
                     <button id="clearSearchBtn" class="search-clear hidden">✕</button>
+                </div>
+                <div class="sort-container">
+                    <label for="sortSelect" class="sort-label">Sort by</label>
+                    <select id="sortSelect" class="sort-select">
+                        <option value="title">Title</option>
+                        <option value="category">Category</option>
+                    </select>
+                </div>
+                <div class="filter-container">
+                    <label for="categoryFilter" class="filter-label">Category</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="all">All Categories</option>
+                    </select>
                 </div>
                 <div class="view-toggle">
                     <button id="cardViewBtn" class="view-toggle-btn active" title="Card View">
@@ -29,7 +42,6 @@
                         <span>≡</span>
                     </button>
                 </div>
-                <button id="loginBtn" class="nav-btn login-btn">Login</button>
             </div>
         </nav>
 
@@ -53,6 +65,13 @@
                     <div class="form-group">
                         <label for="description">Description</label>
                         <textarea id="description" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="unknown">Unknown</option>
+                        </select>
                     </div>
 
                     <div class="form-row">
@@ -91,7 +110,10 @@
         <!-- Recipe Detail View -->
         <div id="detailView" class="view hidden">
             <div class="detail-container">
-                <button id="backBtn" class="btn btn-secondary">← Back</button>
+                <div class="detail-top-row">
+                    <button id="backBtn" class="btn btn-secondary">← Back</button>
+                    <button id="shareBtn" class="btn btn-secondary share-btn" aria-label="Share recipe">🔗 Share</button>
+                </div>
                 <div id="recipeDetail"></div>
             </div>
         </div>

@@ -48,6 +48,19 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// Get distinct categories
+router.get('/categories', async (req, res) => {
+  try {
+    const rows = await all(
+      `SELECT DISTINCT category FROM recipes WHERE category IS NOT NULL AND TRIM(category) <> '' ORDER BY LOWER(category) ASC`
+    );
+    const categories = rows.map(r => r.category);
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get single recipe
 router.get('/:id', async (req, res) => {
   try {

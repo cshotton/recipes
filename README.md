@@ -49,12 +49,12 @@ npm run dev
 To build the Docker image for the private registry:
 
 ```bash
-docker build -t home.shotton.us:5443/recipes:latest .
+docker build -t your_repo/recipes:latest .
 ```
 
 Push to registry:
 ```bash
-docker push home.shotton.us:5443/recipes:latest
+docker push your_repo/recipes:latest
 ```
 
 ### Run with Docker Compose

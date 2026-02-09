@@ -1,11 +1,12 @@
 const API_URL = '/api/recipes';
 
 // DOM Elements
-const viewAllBtn = document.getElementById('viewAllBtn');
 const addRecipeBtn = document.getElementById('addRecipeBtn');
 const importBtn = document.getElementById('importBtn');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
+const sortSelect = document.getElementById('sortSelect');
+const categoryFilter = document.getElementById('categoryFilter');
 const cardViewBtn = document.getElementById('cardViewBtn');
 const listViewBtn = document.getElementById('listViewBtn');
 const cancelBtn = document.getElementById('cancelBtn');
@@ -13,11 +14,14 @@ const backBtn = document.getElementById('backBtn');
 const importCancelBtn = document.getElementById('importCancelBtn');
 const recipeForm = document.getElementById('recipeForm');
 const importForm = document.getElementById('importForm');
+const categorySelect = document.getElementById('category');
+const shareBtn = document.getElementById('shareBtn');
 
 const listView = document.getElementById('listView');
 const formView = document.getElementById('formView');
 const detailView = document.getElementById('detailView');
 const importView = document.getElementById('importView');
+const navBar = document.querySelector('.nav');
 
 const recipesList = document.getElementById('recipesList');
 const recipeDetail = document.getElementById('recipeDetail');
@@ -26,6 +30,9 @@ const loginBtn = document.getElementById('loginBtn');
 let currentEditId = null;
 let currentViewMode = 'card'; // 'card' or 'list'
 let currentSearchQuery = '';
+let currentSortKey = 'title';
+let currentCategoryFilter = 'all';
+let currentDetailId = null;
 
 // View Management
 function showView(view) {
@@ -34,6 +41,30 @@ function showView(view) {
     detailView.classList.add('hidden');
     importView.classList.add('hidden');
     view.classList.remove('hidden');
+
+    if (navBar) {
+        navBar.style.display = view === detailView ? 'none' : 'flex';
+    }
+
+    if (view !== detailView) {
+        setRecipeParam(null);
+    }
+}
+
+function getRecipeIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('recipe');
+    return id ? parseInt(id, 10) : null;
+}
+
+function setRecipeParam(id) {
+    const url = new URL(window.location.href);
+    if (id) {
+        url.searchParams.set('recipe', id.toString());
+    } else {
+        url.searchParams.delete('recipe');
+    }
+    window.history.replaceState({}, '', url.toString());
 }
 
 function setNavActive(btn) {
@@ -41,17 +72,13 @@ function setNavActive(btn) {
     btn.classList.add('active');
 }
 
-// Event Listeners
-viewAllBtn.addEventListener('click', () => {
-    setNavActive(viewAllBtn);
-    showView(listView);
-    loadRecipes();
-});
-
 addRecipeBtn.addEventListener('click', () => {
     currentEditId = null;
     recipeForm.reset();
     document.getElementById('formTitle').textContent = 'Add New Recipe';
+    if (categorySelect) {
+        categorySelect.value = 'unknown';
+    }
     showView(formView);
 });
 
@@ -62,8 +89,16 @@ cancelBtn.addEventListener('click', () => {
 
 backBtn.addEventListener('click', () => {
     showView(listView);
-    loadRecipes();
+    refreshList();
 });
+
+if (shareBtn) {
+    shareBtn.addEventListener('click', () => {
+        if (currentDetailId) {
+            shareRecipe(currentDetailId);
+        }
+    });
+}
 
 recipeForm.addEventListener('submit', saveRecipe);
 
@@ -76,7 +111,7 @@ importBtn.addEventListener('click', () => {
 
 importCancelBtn.addEventListener('click', () => {
     showView(listView);
-    loadRecipes();
+    refreshList();
 });
 
 importForm.addEventListener('submit', importRecipesFromCSV);
@@ -161,15 +196,48 @@ clearSearchBtn.addEventListener('click', () => {
     loadRecipes();
 });
 
+// Sort
+if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+        currentSortKey = sortSelect.value || 'title';
+        if (currentSearchQuery) {
+            searchRecipes(currentSearchQuery);
+        } else {
+            loadRecipes();
+        }
+    });
+}
+
+// Category filter
+if (categoryFilter) {
+    categoryFilter.addEventListener('change', () => {
+        currentCategoryFilter = categoryFilter.value || 'all';
+        if (currentSearchQuery) {
+            searchRecipes(currentSearchQuery);
+        } else {
+            loadRecipes();
+        }
+    });
+}
+
 // Load and Display Recipes
 async function loadRecipes() {
     try {
         const response = await fetch(API_URL);
         const recipes = await response.json();
-        displayRecipes(recipes);
+        const filtered = filterRecipesByCategory(recipes);
+        displayRecipes(sortRecipes(filtered));
     } catch (error) {
         console.error('Error loading recipes:', error);
         recipesList.innerHTML = '<div class="empty-state"><h2>Error</h2><p>Could not load recipes</p></div>';
+    }
+}
+
+function refreshList() {
+    if (currentSearchQuery) {
+        searchRecipes(currentSearchQuery);
+    } else {
+        loadRecipes();
     }
 }
 
@@ -178,10 +246,68 @@ async function searchRecipes(query) {
     try {
         const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
         const recipes = await response.json();
-        displayRecipes(recipes);
+        const filtered = filterRecipesByCategory(recipes);
+        displayRecipes(sortRecipes(filtered));
     } catch (error) {
         console.error('Error searching recipes:', error);
         recipesList.innerHTML = '<div class="empty-state"><h2>Error</h2><p>Could not search recipes</p></div>';
+    }
+}
+
+function filterRecipesByCategory(recipes) {
+    const selected = currentCategoryFilter || 'all';
+    if (selected === 'all') return recipes;
+    return recipes.filter(r => (r.category || '').toString().toLowerCase() === selected.toLowerCase());
+}
+
+function sortRecipes(recipes) {
+    const key = currentSortKey || 'title';
+    return [...recipes].sort((a, b) => {
+        const aVal = (a[key] || '').toString().toLowerCase();
+        const bVal = (b[key] || '').toString().toLowerCase();
+        if (aVal < bVal) return -1;
+        if (aVal > bVal) return 1;
+        return 0;
+    });
+}
+
+async function loadCategories() {
+    if (!categoryFilter) return;
+    try {
+        const resp = await fetch('/api/recipes/categories');
+        if (!resp.ok) return;
+        const categories = await resp.json();
+
+        const options = ['all', ...categories];
+        categoryFilter.innerHTML = options.map(cat => {
+            const label = cat === 'all' ? 'All Categories' : cat;
+            return `<option value="${escapeHtml(cat)}">${escapeHtml(label)}</option>`;
+        }).join('');
+
+        categoryFilter.value = currentCategoryFilter || 'all';
+
+        if (categorySelect) {
+            const formOptions = ['unknown', ...categories.filter(c => c.toLowerCase() !== 'unknown')];
+            categorySelect.innerHTML = formOptions.map(cat => {
+                const label = cat === 'unknown' ? 'Unknown' : cat;
+                return `<option value="${escapeHtml(cat)}">${escapeHtml(label)}</option>`;
+            }).join('');
+            if (!categorySelect.value) categorySelect.value = 'unknown';
+        }
+    } catch (err) {
+        console.error('Error loading categories:', err);
+    }
+}
+
+function ensureCategoryOption(category) {
+    if (!categorySelect) return;
+    const value = (category || 'unknown').toString();
+    const exists = Array.from(categorySelect.options).some(opt => opt.value === value);
+    if (!exists) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        categorySelect.appendChild(option);
     }
 }
 
@@ -241,6 +367,7 @@ async function viewRecipeDetail(id) {
     try {
         const response = await fetch(`${API_URL}/${id}`);
         const recipe = await response.json();
+        currentDetailId = recipe.id;
         
         const ingredients = recipe.ingredients.split('\n').filter(i => i.trim());
         const instructions = recipe.instructions.split('\n').filter(i => i.trim());
@@ -267,16 +394,34 @@ async function viewRecipeDetail(id) {
                 </ol>
 
                 ${isAuthenticated() ? `<div class="detail-actions">
-                    <button class="btn btn-primary" onclick="editRecipe(${recipe.id})">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
+                        <button class="btn btn-primary" onclick="editRecipe(${recipe.id})">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
                 </div>` : ''}
             </div>
         `;
-        
+
         showView(detailView);
+        setRecipeParam(recipe.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
         console.error('Error loading recipe:', error);
         alert('Could not load recipe');
+    }
+}
+
+async function shareRecipe(id) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('recipe', id.toString());
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url.toString());
+            alert('Recipe link copied to clipboard');
+        } else {
+            throw new Error('Clipboard unavailable');
+        }
+    } catch (err) {
+        prompt('Copy this link to share the recipe:', url.toString());
     }
 }
 
@@ -295,6 +440,10 @@ async function editRecipe(id) {
         document.getElementById('prepTime').value = recipe.prepTime || '';
         document.getElementById('cookTime').value = recipe.cookTime || '';
         document.getElementById('servings').value = recipe.servings || '';
+        if (categorySelect) {
+            ensureCategoryOption(recipe.category || 'unknown');
+            categorySelect.value = recipe.category || 'unknown';
+        }
         
         showView(formView);
     } catch (error) {
@@ -309,6 +458,7 @@ async function saveRecipe(e) {
 
     const data = {
         title: document.getElementById('title').value,
+        category: categorySelect ? categorySelect.value : 'unknown',
         description: document.getElementById('description').value,
         ingredients: document.getElementById('ingredients').value,
         instructions: document.getElementById('instructions').value,
@@ -332,7 +482,7 @@ async function saveRecipe(e) {
         alert(currentEditId ? 'Recipe updated!' : 'Recipe added!');
         currentEditId = null;
         showView(listView);
-        loadRecipes();
+        refreshList();
     } catch (error) {
         console.error('Error saving recipe:', error);
         alert('Error saving recipe');
@@ -349,7 +499,7 @@ async function deleteRecipe(id) {
 
         alert('Recipe deleted!');
         showView(listView);
-        loadRecipes();
+        refreshList();
     } catch (error) {
         console.error('Error deleting recipe:', error);
         alert('Error deleting recipe');
@@ -416,7 +566,7 @@ async function importRecipesFromCSV(e) {
             
             setTimeout(() => {
                 showView(listView);
-                loadRecipes();
+                refreshList();
             }, 2000);
         } else {
             resultContent.innerHTML = `<div class="import-result-item">❌ Error: ${escapeHtml(result.error)}</div>`;
@@ -432,5 +582,13 @@ async function importRecipesFromCSV(e) {
 }
 
 // Initialize
-updateAuthUI();
-loadRecipes();
+updateAuthUI()
+    .then(() => loadCategories())
+    .then(() => {
+        const id = getRecipeIdFromUrl();
+        if (id) {
+            return viewRecipeDetail(id);
+        }
+        return loadRecipes();
+    })
+    .catch(() => loadRecipes());
