@@ -9,6 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 8003;
 const SERVER_PASSWORD = process.env.SERVER_PASSWORD || 'maple';
 const SITE_NAME = process.env.SITE_NAME || 'Recipes';
+const packageJson = require('../package.json');
+const VERSION = packageJson.version;
 
 // Middleware
 app.use(cors());
@@ -56,7 +58,7 @@ app.use('/api/recipes', recipeRoutes);
 // Auth status endpoint for frontend to query authentication state
 app.get('/api/auth/status', (req, res) => {
   const authed = req.cookies && req.cookies.recipes_auth === 'authed';
-  res.json({ authed, siteName: SITE_NAME });
+  res.json({ authed, siteName: SITE_NAME, version: VERSION });
 });
 
 // Serve frontend (root)
@@ -64,6 +66,33 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
+  console.log(`\n${'='.repeat(50)}`);
+  console.log(`Recipes Application v${VERSION}`);
+  console.log(`${'='.repeat(50)}`);
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Site Name: ${SITE_NAME}`);
+  console.log(`Node Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`${'='.repeat(50)}\n`);
 });
+
+// Graceful shutdown handlers
+const gracefulShutdown = () => {
+  console.log('\nShutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    db.close(() => {
+      console.log('Database connection closed');
+      process.exit(0);
+    });
+  });
+  
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);

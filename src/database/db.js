@@ -62,4 +62,15 @@ const all = (sql, params = []) => {
   });
 };
 
-module.exports = { db, initialize, run, get, all };
+const close = (callback) => {
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+      callback(err);
+    } else {
+      callback(null);
+    }
+  });
+};
+
+module.exports = { db, initialize, run, get, all, close };

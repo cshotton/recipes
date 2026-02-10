@@ -33,6 +33,8 @@ let currentSearchQuery = '';
 let currentSortKey = 'title';
 let currentCategoryFilter = 'all';
 let currentDetailId = null;
+let listScrollPosition = 0; // Track scroll position for returning to list
+let toastHideTimer = null;
 
 // View Management
 function showView(view) {
@@ -165,6 +167,13 @@ async function updateAuthUI() {
                     titleElement.textContent = body.siteName;
                 }
             }
+            // Set version in footer
+            if (body.version) {
+                const versionElement = document.getElementById('versionInfo');
+                if (versionElement) {
+                    versionElement.textContent = `${body.siteName} v${body.version}`;
+                }
+            }
         } else {
             authState = false;
         }
@@ -247,6 +256,10 @@ function refreshList() {
     } else {
         loadRecipes();
     }
+    // Restore scroll position after returning from detail view
+    setTimeout(() => {
+        window.scrollTo({ top: listScrollPosition, behavior: 'auto' });
+    }, 0);
 }
 
 // Search Recipes
@@ -373,6 +386,9 @@ function displayRecipes(recipes) {
 // View Recipe Detail
 async function viewRecipeDetail(id) {
     try {
+        // Save scroll position before navigating away from list
+        listScrollPosition = window.scrollY;
+        
         const response = await fetch(`${API_URL}/${id}`);
         const recipe = await response.json();
         currentDetailId = recipe.id;
@@ -424,13 +440,34 @@ async function shareRecipe(id) {
     try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(url.toString());
-            alert('Recipe link copied to clipboard');
+            showToast('Recipe link copied to clipboard');
         } else {
             throw new Error('Clipboard unavailable');
         }
     } catch (err) {
         prompt('Copy this link to share the recipe:', url.toString());
     }
+}
+
+function showToast(message) {
+    let toast = document.getElementById('copyToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'copyToast';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.add('show');
+
+    if (toastHideTimer) {
+        clearTimeout(toastHideTimer);
+    }
+
+    toastHideTimer = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 1500);
 }
 
 // Edit Recipe
