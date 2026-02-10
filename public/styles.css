@@ -308,30 +308,7 @@ header h1 {
 .recipe-list-actions {
     display: flex;
     gap: 8px;
-    margin-left: 15px;
-}
-
-.recipe-list-actions button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: all 0.3s ease;
-}
-
-.recipe-list-actions .edit {
-    background: #667eea;
-    color: white;
-}
-
-.recipe-list-actions .delete {
-    background: #ff6b6b;
-    color: white;
-}
-
-.recipe-list-actions button:hover {
-    opacity: 0.8;
+    margin-left: auto;
 }
 
 .recipe-card {
@@ -342,6 +319,8 @@ header h1 {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
 }
 
 .recipe-card:hover {
@@ -375,30 +354,7 @@ header h1 {
     display: flex;
     gap: 10px;
     margin-top: 15px;
-}
-
-.recipe-actions button {
-    flex: 1;
-    padding: 8px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-}
-
-.recipe-actions .edit {
-    background: #667eea;
-    color: white;
-}
-
-.recipe-actions .delete {
-    background: #ff6b6b;
-    color: white;
-}
-
-.recipe-actions button:hover {
-    opacity: 0.8;
+    justify-content: flex-end;
 }
 
 /* Form Styles */
@@ -466,6 +422,34 @@ textarea {
     font-weight: 500;
 }
 
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    background: transparent !important;
+    color: #666;
+    border: 1.5px solid #ddd;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    background: #f0f0f0 !important;
+    border-color: #667eea;
+    color: #666;
+}
+
+.icon-btn.pressing {
+    background: #e8e8e8 !important;
+    border-color: #5568d3;
+    transform: scale(0.95);
+}
+
 .btn-primary {
     background: #667eea;
     color: white;
@@ -506,6 +490,17 @@ textarea {
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 15px;
+}
+
+.detail-top-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#detailActions {
+    display: flex;
+    gap: 8px;
 }
 
 #recipeDetail {
@@ -567,15 +562,34 @@ textarea {
     display: flex;
     gap: 10px;
     margin-top: 20px;
-    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .detail-actions button {
-    flex: 1;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: all 0.3s ease;
+    background: transparent;
+    color: #666;
+    border: 1.5px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.detail-actions .share-btn {
-    flex: 0 0 auto;
+.detail-actions button:hover {
+    background: #f0f0f0;
+    border-color: #667eea;
+}
+
+.detail-actions button.pressing {
+    background: #e8e8e8;
+    border-color: #5568d3;
+    transform: scale(0.95);
 }
 
 /* Empty State */

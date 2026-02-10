@@ -25,6 +25,7 @@ const navBar = document.querySelector('.nav');
 
 const recipesList = document.getElementById('recipesList');
 const recipeDetail = document.getElementById('recipeDetail');
+const detailActions = document.getElementById('detailActions');
 const loginBtn = document.getElementById('loginBtn');
 
 let currentEditId = null;
@@ -86,7 +87,7 @@ addRecipeBtn.addEventListener('click', () => {
 
 cancelBtn.addEventListener('click', () => {
     showView(listView);
-    loadRecipes();
+    refreshList();
 });
 
 backBtn.addEventListener('click', () => {
@@ -201,8 +202,14 @@ if (loginBtn) {
         } catch (err) {
             console.error('Logout failed', err);
         }
+        // Reset to card view and update UI
+        currentViewMode = 'card';
+        cardViewBtn.classList.add('active');
+        listViewBtn.classList.remove('active');
+        currentEditId = null;
         await updateAuthUI();
         loadRecipes();
+        showView(listView);
     });
 }
 
@@ -356,10 +363,6 @@ function displayRecipes(recipes) {
                         ${recipe.servings ? `<span>👥 ${recipe.servings} servings</span>` : ''}
                     </div>
                 </div>
-                ${isAuthenticated() ? `<div class="recipe-list-actions">
-                    <button class="edit" onclick="event.stopPropagation(); editRecipe(${recipe.id})">Edit</button>
-                    <button class="delete" onclick="event.stopPropagation(); deleteRecipe(${recipe.id})">Delete</button>
-                </div>` : ''}
             </div>
         `).join('');
     } else {
@@ -374,10 +377,6 @@ function displayRecipes(recipes) {
                     ${recipe.cookTime ? `<span>🔥 Cook: ${recipe.cookTime}m</span>` : ''}
                     ${recipe.servings ? `<span>👥 ${recipe.servings} servings</span>` : ''}
                 </div>
-                ${isAuthenticated() ? `<div class="recipe-actions">
-                    <button class="edit" onclick="event.stopPropagation(); editRecipe(${recipe.id})">Edit</button>
-                    <button class="delete" onclick="event.stopPropagation(); deleteRecipe(${recipe.id})">Delete</button>
-                </div>` : ''}
             </div>
         `).join('');
     }
@@ -416,13 +415,14 @@ async function viewRecipeDetail(id) {
                 <ol>
                     ${instructions.map(inst => `<li>${escapeHtml(inst)}</li>`).join('')}
                 </ol>
-
-                ${isAuthenticated() ? `<div class="detail-actions">
-                        <button class="btn btn-primary" onclick="editRecipe(${recipe.id})">Edit</button>
-                        <button class="btn btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
-                </div>` : ''}
             </div>
         `;
+
+        // Set edit/delete buttons in the top row
+        detailActions.innerHTML = isAuthenticated() ? `
+            <button class="btn icon-btn" onclick="editRecipe(${recipe.id})" title="Edit">✏️</button>
+            <button class="btn icon-btn" onclick="deleteRecipe(${recipe.id})" title="Delete">🗑️</button>
+        ` : '';
 
         showView(detailView);
         setRecipeParam(recipe.id);
@@ -475,13 +475,20 @@ async function editRecipe(id) {
     try {
         const response = await fetch(`${API_URL}/${id}`);
         const recipe = await response.json();
+
+        const normalizeTextAreaValue = (value) => {
+            if (!value) return '';
+            return value
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/\r\n/g, '\n');
+        };
         
         currentEditId = id;
         document.getElementById('formTitle').textContent = 'Edit Recipe';
         document.getElementById('title').value = recipe.title;
-        document.getElementById('description').value = recipe.description || '';
-        document.getElementById('ingredients').value = recipe.ingredients;
-        document.getElementById('instructions').value = recipe.instructions;
+        document.getElementById('description').value = normalizeTextAreaValue(recipe.description);
+        document.getElementById('ingredients').value = normalizeTextAreaValue(recipe.ingredients);
+        document.getElementById('instructions').value = normalizeTextAreaValue(recipe.instructions);
         document.getElementById('prepTime').value = recipe.prepTime || '';
         document.getElementById('cookTime').value = recipe.cookTime || '';
         document.getElementById('servings').value = recipe.servings || '';
@@ -637,3 +644,37 @@ updateAuthUI()
         return loadRecipes();
     })
     .catch(() => loadRecipes());
+
+// Button press handling: track if mouseup was within bounds
+let iconBtnMouseDownTarget = null;
+let iconBtnClickAllowed = false;
+
+document.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('icon-btn')) {
+        iconBtnMouseDownTarget = e.target;
+        iconBtnClickAllowed = false;
+        e.target.classList.add('pressing');
+    }
+});
+
+document.addEventListener('mouseup', (e) => {
+    if (iconBtnMouseDownTarget && iconBtnMouseDownTarget.classList.contains('pressing')) {
+        const rect = iconBtnMouseDownTarget.getBoundingClientRect();
+        const isWithinBounds = 
+            e.clientX >= rect.left && 
+            e.clientX <= rect.right && 
+            e.clientY >= rect.top && 
+            e.clientY <= rect.bottom;
+        
+        iconBtnMouseDownTarget.classList.remove('pressing');
+        iconBtnClickAllowed = isWithinBounds;
+        iconBtnMouseDownTarget = null;
+    }
+}, true);
+
+function handleIconBtnClick(fn) {
+    if (iconBtnClickAllowed) {
+        iconBtnClickAllowed = false;
+        fn();
+    }
+}
