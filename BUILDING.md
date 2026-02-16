@@ -33,7 +33,7 @@ Build and push multi-arch image:
 
 ```bash
 # ensure you're logged in
-docker login home.shotton.us:5443
+docker login repo.com
 npm run docker:buildx:create
 npm run docker:buildx:build
 ```
